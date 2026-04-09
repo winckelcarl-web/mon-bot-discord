@@ -11,7 +11,12 @@ const {
 } = require('discord.js');
 
 const fs = require('fs');
+const express = require('express');
 
+// ===== CONFIG =====
+const TOKEN = process.env.DISCORD_TOKEN;
+
+// ===== CLIENT =====
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -24,11 +29,13 @@ const client = new Client({
 // ===== COMMANDS =====
 client.commands = new Map();
 
-const commandFiles = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
+if (fs.existsSync('./commands')) {
+  const commandFiles = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
 
-for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  client.commands.set(command.name, command);
+  for (const file of commandFiles) {
+    const command = require(`./commands/${file}`);
+    client.commands.set(command.name, command);
+  }
 }
 
 // ===== WARN SYSTEM =====
@@ -111,7 +118,7 @@ client.on('interactionCreate', async interaction => {
           ephemeral: true
         });
 
-      } catch (err) {
+      } catch {
         return interaction.reply({
           content: "❌ Permission refusée",
           ephemeral: true
@@ -141,16 +148,15 @@ client.on('interactionCreate', async interaction => {
 
       const modal = new ModalBuilder()
         .setCustomId('modal_title')
-        .setTitle('Titre');
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('title')
-            .setLabel('Titre')
-            .setStyle(TextInputStyle.Short)
-        )
-      );
+        .setTitle('Titre')
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('title')
+              .setLabel('Titre')
+              .setStyle(TextInputStyle.Short)
+          )
+        );
 
       return interaction.showModal(modal);
     }
@@ -159,16 +165,15 @@ client.on('interactionCreate', async interaction => {
 
       const modal = new ModalBuilder()
         .setCustomId('modal_desc')
-        .setTitle('Description');
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('desc')
-            .setLabel('Description')
-            .setStyle(TextInputStyle.Paragraph)
-        )
-      );
+        .setTitle('Description')
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('desc')
+              .setLabel('Description')
+              .setStyle(TextInputStyle.Paragraph)
+          )
+        );
 
       return interaction.showModal(modal);
     }
@@ -177,16 +182,15 @@ client.on('interactionCreate', async interaction => {
 
       const modal = new ModalBuilder()
         .setCustomId('modal_color')
-        .setTitle('Couleur');
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('color')
-            .setLabel('Couleur HEX (#5865F2)')
-            .setStyle(TextInputStyle.Short)
-        )
-      );
+        .setTitle('Couleur')
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('color')
+              .setLabel('Couleur HEX (#5865F2)')
+              .setStyle(TextInputStyle.Short)
+          )
+        );
 
       return interaction.showModal(modal);
     }
@@ -232,5 +236,22 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
+// ===== SERVEUR WEB (Render obligatoire) =====
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("✅ Bot en ligne !");
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🌐 Web actif sur ${PORT}`);
+});
+
 // ===== LOGIN =====
-client.login(process.env.TOKEN);
+client.login(TOKEN);
+
+// ===== ANTI CRASH =====
+process.on("unhandledRejection", err => console.error(err));
+process.on("uncaughtException", err => console.error(err));
