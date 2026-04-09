@@ -233,4 +233,4 @@ client.on('interactionCreate', async interaction => {
 });
 
 // ===== LOGIN =====
-client.login('MTQ1ODE1MTQ0NjI1OTE3MTQ5Mw.GTmNV3._8aXSgo55INLYLtwP90RXBL30d1KsqXBH_BtP0');
+client.login(process.env.TOKEN);
