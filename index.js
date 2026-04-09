@@ -7,7 +7,8 @@ const {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
-  EmbedBuilder
+  EmbedBuilder,
+  ActivityType
 } = require('discord.js');
 
 const fs = require('fs');
@@ -47,12 +48,23 @@ const saveWarns = () => {
   fs.writeFileSync('./warns.json', JSON.stringify(warns, null, 2));
 };
 
-// ===== SESSIONS EMBED =====
+// ===== SESSIONS =====
 const sessions = {};
 
 // ===== READY =====
 client.once('ready', () => {
   console.log(`✅ Connecté : ${client.user.tag}`);
+
+  // ⭐ AJOUT IMPORTANT : statut en ligne
+  client.user.setPresence({
+    status: 'online',
+    activities: [
+      {
+        name: 'je suis en ligne 👀',
+        type: ActivityType.Playing
+      }
+    ]
+  });
 });
 
 // ===== MESSAGE =====
@@ -73,7 +85,6 @@ client.on('messageCreate', async message => {
     });
   }
 
-  // ===== EMBED BUILDER =====
   if (commandName === 'embed') {
 
     sessions[message.author.id] = {
@@ -95,7 +106,6 @@ client.on('messageCreate', async message => {
       components: [row]
     });
   }
-
 });
 
 // ===== INTERACTIONS =====
@@ -105,7 +115,13 @@ client.on('interactionCreate', async interaction => {
 
   if (interaction.isButton()) {
 
-    // ===== ROLE BUTTON =====
+    if (!session && interaction.customId !== 'give_role') {
+      return interaction.reply({
+        content: "❌ Lance !embed",
+        ephemeral: true
+      });
+    }
+
     if (interaction.customId === 'give_role') {
 
       const roleId = "TON_ID_ROLE";
@@ -126,14 +142,6 @@ client.on('interactionCreate', async interaction => {
       }
     }
 
-    // ===== EMBED =====
-    if (!session) {
-      return interaction.reply({
-        content: "❌ Lance !embed",
-        ephemeral: true
-      });
-    }
-
     if (interaction.customId === 'preview') {
 
       const embed = new EmbedBuilder()
@@ -145,7 +153,6 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.customId === 'title') {
-
       const modal = new ModalBuilder()
         .setCustomId('modal_title')
         .setTitle('Titre')
@@ -162,7 +169,6 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.customId === 'desc') {
-
       const modal = new ModalBuilder()
         .setCustomId('modal_desc')
         .setTitle('Description')
@@ -179,7 +185,6 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.customId === 'color') {
-
       const modal = new ModalBuilder()
         .setCustomId('modal_color')
         .setTitle('Couleur')
@@ -236,7 +241,7 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// ===== SERVEUR WEB (Render obligatoire) =====
+// ===== SERVEUR WEB =====
 const app = express();
 
 app.get("/", (req, res) => {
