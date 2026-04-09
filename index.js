@@ -60,7 +60,7 @@ client.once('ready', () => {
     status: 'online',
     activities: [
       {
-        name: 'je suis en ligne 👀',
+        name: 'Rejoins le serv dans ma bio !',
         type: ActivityType.Playing
       }
     ]
