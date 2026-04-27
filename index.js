@@ -9,10 +9,10 @@ const {
   TextInputStyle,
   EmbedBuilder,
   ActivityType
-} = require('discord.js');
+} = require("discord.js");
 
-const fs = require('fs');
-const express = require('express');
+const fs = require("fs");
+const express = require("express");
 
 // ===== CONFIG =====
 const TOKEN = process.env.DISCORD_TOKEN;
@@ -30,8 +30,10 @@ const client = new Client({
 // ===== COMMANDS =====
 client.commands = new Map();
 
-if (fs.existsSync('./commands')) {
-  const commandFiles = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
+if (fs.existsSync("./commands")) {
+  const commandFiles = fs
+    .readdirSync("./commands")
+    .filter(f => f.endsWith(".js"));
 
   for (const file of commandFiles) {
     const command = require(`./commands/${file}`);
@@ -40,38 +42,37 @@ if (fs.existsSync('./commands')) {
 }
 
 // ===== WARN SYSTEM =====
-let warns = fs.existsSync('./warns.json')
-  ? JSON.parse(fs.readFileSync('./warns.json', 'utf8'))
+let warns = fs.existsSync("./warns.json")
+  ? JSON.parse(fs.readFileSync("./warns.json", "utf8"))
   : {};
 
 const saveWarns = () => {
-  fs.writeFileSync('./warns.json', JSON.stringify(warns, null, 2));
+  fs.writeFileSync("./warns.json", JSON.stringify(warns, null, 2));
 };
 
-// ===== SESSIONS =====
-const sessions = {};
+// ===== EMBED MAKER SESSIONS =====
+const makeCommand = require("./commands/make");
+const sessions = makeCommand.sessions || {};
 
 // ===== READY =====
-client.once('ready', () => {
+client.once("ready", () => {
   console.log(`✅ Connecté : ${client.user.tag}`);
 
-  // ⭐ AJOUT IMPORTANT : statut en ligne
   client.user.setPresence({
-    status: 'online',
+    status: "online",
     activities: [
       {
-        name: 'Rejoins le serv dans ma bio !',
+        name: "Bot en ligne",
         type: ActivityType.Playing
       }
     ]
   });
 });
 
-// ===== MESSAGE =====
-client.on('messageCreate', async message => {
-
+// ===== MESSAGE COMMANDS =====
+client.on("messageCreate", async message => {
   if (message.author.bot) return;
-  if (!message.content.startsWith('!')) return;
+  if (!message.content.startsWith("!")) return;
 
   const args = message.content.slice(1).trim().split(/ +/);
   const commandName = args.shift().toLowerCase();
@@ -85,122 +86,36 @@ client.on('messageCreate', async message => {
     });
   }
 
-  if (commandName === 'embed') {
-
-    sessions[message.author.id] = {
-      title: '',
-      description: '',
-      color: '#5865F2'
-    };
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('title').setLabel('Titre').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('desc').setLabel('Description').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('color').setLabel('Couleur').setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId('preview').setLabel('Preview').setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId('send').setLabel('Envoyer').setStyle(ButtonStyle.Danger)
-    );
-
-    return message.channel.send({
-      content: "🎛️ Création d'embed",
-      components: [row]
-    });
-  }
+  // fallback help / embed system handled in commands
 });
 
 // ===== INTERACTIONS =====
-client.on('interactionCreate', async interaction => {
+client.on("interactionCreate", async interaction => {
 
   const session = sessions[interaction.user.id];
 
+  // ===== BUTTONS =====
   if (interaction.isButton()) {
 
-    if (!session && interaction.customId !== 'give_role') {
+    if (!session && interaction.customId.startsWith("mk_")) {
       return interaction.reply({
-        content: "❌ Lance !embed",
+        content: "❌ Lance !make",
         ephemeral: true
       });
     }
 
-    if (interaction.customId === 'give_role') {
-
-      const roleId = "TON_ID_ROLE";
-
-      try {
-        await interaction.member.roles.add(roleId);
-
-        return interaction.reply({
-          content: "✅ Rôle ajouté !",
-          ephemeral: true
-        });
-
-      } catch {
-        return interaction.reply({
-          content: "❌ Permission refusée",
-          ephemeral: true
-        });
-      }
-    }
-
-    if (interaction.customId === 'preview') {
-
+    // PREVIEW
+    if (interaction.customId === "mk_preview") {
       const embed = new EmbedBuilder()
-        .setTitle(session.title || "Titre")
-        .setDescription(session.description || "Description")
+        .setTitle(session.title)
+        .setDescription(session.description)
         .setColor(session.color);
 
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    if (interaction.customId === 'title') {
-      const modal = new ModalBuilder()
-        .setCustomId('modal_title')
-        .setTitle('Titre')
-        .addComponents(
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId('title')
-              .setLabel('Titre')
-              .setStyle(TextInputStyle.Short)
-          )
-        );
-
-      return interaction.showModal(modal);
-    }
-
-    if (interaction.customId === 'desc') {
-      const modal = new ModalBuilder()
-        .setCustomId('modal_desc')
-        .setTitle('Description')
-        .addComponents(
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId('desc')
-              .setLabel('Description')
-              .setStyle(TextInputStyle.Paragraph)
-          )
-        );
-
-      return interaction.showModal(modal);
-    }
-
-    if (interaction.customId === 'color') {
-      const modal = new ModalBuilder()
-        .setCustomId('modal_color')
-        .setTitle('Couleur')
-        .addComponents(
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId('color')
-              .setLabel('Couleur HEX (#5865F2)')
-              .setStyle(TextInputStyle.Short)
-          )
-        );
-
-      return interaction.showModal(modal);
-    }
-
-    if (interaction.customId === 'send') {
+    // SEND
+    if (interaction.customId === "mk_send") {
 
       const embed = new EmbedBuilder()
         .setTitle(session.title)
@@ -209,29 +124,77 @@ client.on('interactionCreate', async interaction => {
 
       delete sessions[interaction.user.id];
 
-      await interaction.reply({
-        content: "✅ Envoyé",
-        ephemeral: true
-      });
-
+      await interaction.reply({ content: "✅ Envoyé", ephemeral: true });
       return interaction.channel.send({ embeds: [embed] });
+    }
+
+    // MODALS
+    const modal = new ModalBuilder();
+
+    if (interaction.customId === "mk_title") {
+      modal
+        .setCustomId("mk_modal_title")
+        .setTitle("Titre")
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("title")
+              .setLabel("Titre")
+              .setStyle(TextInputStyle.Short)
+          )
+        );
+
+      return interaction.showModal(modal);
+    }
+
+    if (interaction.customId === "mk_desc") {
+      modal
+        .setCustomId("mk_modal_desc")
+        .setTitle("Description")
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("desc")
+              .setLabel("Description")
+              .setStyle(TextInputStyle.Paragraph)
+          )
+        );
+
+      return interaction.showModal(modal);
+    }
+
+    if (interaction.customId === "mk_color") {
+      modal
+        .setCustomId("mk_modal_color")
+        .setTitle("Couleur HEX")
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("color")
+              .setLabel("#5865F2")
+              .setStyle(TextInputStyle.Short)
+          )
+        );
+
+      return interaction.showModal(modal);
     }
   }
 
+  // ===== MODALS =====
   if (interaction.isModalSubmit()) {
 
     if (!session) return;
 
-    if (interaction.customId === 'modal_title') {
-      session.title = interaction.fields.getTextInputValue('title');
+    if (interaction.customId === "mk_modal_title") {
+      session.title = interaction.fields.getTextInputValue("title");
     }
 
-    if (interaction.customId === 'modal_desc') {
-      session.description = interaction.fields.getTextInputValue('desc');
+    if (interaction.customId === "mk_modal_desc") {
+      session.description = interaction.fields.getTextInputValue("desc");
     }
 
-    if (interaction.customId === 'modal_color') {
-      session.color = interaction.fields.getTextInputValue('color');
+    if (interaction.customId === "mk_modal_color") {
+      session.color = interaction.fields.getTextInputValue("color");
     }
 
     return interaction.reply({
@@ -241,7 +204,7 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// ===== SERVEUR WEB =====
+// ===== WEB SERVER =====
 const app = express();
 
 app.get("/", (req, res) => {
@@ -258,5 +221,5 @@ app.listen(PORT, () => {
 client.login(TOKEN);
 
 // ===== ANTI CRASH =====
-process.on("unhandledRejection", err => console.error(err));
-process.on("uncaughtException", err => console.error(err));
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
